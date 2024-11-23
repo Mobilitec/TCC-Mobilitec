@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#06b6d4">
+  <link rel="shortcut icon" href="img/ace.png">
+  <link rel="stylesheet" href="style.css">
+  <title>Lista de Locais</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC-wNM6Ocy6qxx0aFLOVoJ-2co7l_4I4j8&callback=initMap" async defer></script>
+  <style>
+    /* Estilo para tornar a lista de locais rolável */
+    #locais {
+      max-height: 400px; /* Ajuste a altura conforme necessário */
+      overflow-y: auto;
+      padding: 10px;
+      margin: 0;
+      list-style: none;
+    }
+    #locais li {
+      margin: 5px 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lista de Locais</h1>
+  </header>
+  <main>
+    <section class="lista-locais">
+      <h2>Locais</h2>
+      <ul id="locais">
+        <!-- Lista dos locais será preenchida via JavaScript -->
+      </ul>
+    </section>
+    <section class="mapa">
+      <h2>Mapa</h2>
+      <div id="map"></div>
+    </section>
+  </main>
+  
+  <script>
+    let map;
+
+    function initMap() {
+      // Tentar obter a localização do usuário
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          map = new google.maps.Map(document.getElementById("map"), {
+            center: userLocation,
+            zoom: 15,
+          });
+
+          // Adicionar marcador da localização do usuário com ícone personalizado
+          new google.maps.Marker({
+            position: userLocation,
+            map: map,
+            title: "Sua localização",
+            icon: {
+              url: 'img/iconusserr.png', // Caminho para o ícone personalizado
+              scaledSize: new google.maps.Size(32, 32) // Tamanho do ícone ajustado
+            }
+          });
+
+          // Carregar os locais
+          fetchLocais();
+        }, () => {
+          // Se o usuário negar a permissão ou ocorrer um erro
+          defaultMap();
+        });
+      } else {
+        // Se o navegador não suportar geolocalização
+        defaultMap();
+      }
+    }
+
+    function defaultMap() {
+      const defaultLocation = { lat: -23.1171, lng: -46.5702 };
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: defaultLocation,
+        zoom: 15,
+      });
+
+      fetchLocais();
+    }
+
+    function fetchLocais() {
+      fetch('get_locais.php')
+        .then(response => response.json())
+        .then(locais => {
+          locais.forEach(local => {
+            let iconUrl;
+            switch (local.classi) {
+              case 'boa':
+                iconUrl = 'img/iconloca.jpg';
+                break;
+              case 'regular':
+                iconUrl = 'img/iconlocai.png';
+                break;
+              case 'ruim':
+                iconUrl = 'img/iconlocalll.png';
+                break;
+              default:
+                iconUrl = 'img/iconlocai.png'; // ícone padrão
+            }
+
+            const marker = new google.maps.Marker({
+              position: { lat: parseFloat(local.latitude), lng: parseFloat(local.longitude) },
+              map: map,
+              title: local.name,
+              icon: {
+                url: iconUrl, // Caminho para o ícone personalizado baseado na classificação
+                scaledSize: new google.maps.Size(32, 32) // Tamanho do ícone ajustado
+              }
+            });
+
+            const listItem = document.createElement("li");
+            listItem.textContent = local.name;
+            listItem.addEventListener("click", () => {
+              map.setCenter(marker.getPosition());
+              map.setZoom(17);
+            });
+
+            document.getElementById("locais").appendChild(listItem);
+          });
+        })
+        .catch(error => console.error('Erro ao carregar os locais:', error));
+    }
+  </script>
+</body>
+</html>
